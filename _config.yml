@@ -1,0 +1,20 @@
+title: Mingfei Ma
+description: Personal site — AI inference, CPU/GPU kernels, performance.
+url: https://mingfeima.github.io
+baseurl: ""
+
+markdown: kramdown
+kramdown:
+  input: GFM
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
