@@ -69,24 +69,17 @@ This is the main idea: **fuse loops with matching parallel domains; keep differe
 
 ## 2. Triton Pipeline
 
-The FLA/Triton implementation decomposes prefill into several kernels. Conceptually it looks like this:
+The FLA/Triton implementation decomposes prefill into several kernels. Besides the math operation, the important thing to notice is the parallel dimension of each loop:
 
-```text
-1. chunk_local_cumsum
-   g -> cumulative gate per chunk
+| Step | Kernel / loop | Parallel dimension | Materialized output |
+|------|---------------|--------------------|---------------------|
+| 1 | `chunk_local_cumsum` | `[B, NT, Hv]` | cumulative gate `g` per chunk |
+| 2 | `chunk_gated_delta_rule_fwd_kkt_solve` | `[B, NT, Hv]` or `[B, NT, H]` depending on GQA layout | solved local attention matrix `A_solve` |
+| 3 | `recompute_w_u` | `[B, NT, Hv]` | `w`, `u` |
+| 4 | `chunk_gated_delta_rule_fwd_h` | `[B, Hv]` with a sequential scan over chunks | recurrent chunk state / `v_new`-like temporary |
+| 5 | `chunk_fwd_o` | `[B, NT, Hv]` | final output chunk |
 
-2. chunk_gated_delta_rule_fwd_kkt_solve
-   K, beta, decay -> A_solve
-
-3. recompute_w_u
-   A_solve, K, V, beta, gate -> w, u
-
-4. chunk_gated_delta_rule_fwd_h
-   w, u, state -> recurrent state and intermediate chunk values
-
-5. chunk_fwd_o
-   Q, K, w/u, state -> output
-```
+This table is a useful way to read a GPU kernel pipeline. If two rows have different parallel dimensions, they are usually not good candidates for direct loop fusion. If they have the same dimension and the output of the first row is consumed immediately by the second, fusion becomes interesting.
 
 This is natural for GPU because each Triton kernel has a clean grid. But it materializes intermediate tensors between kernels:
 
@@ -105,26 +98,17 @@ So the CPU version asks a different question: which intermediate tensors can be 
 
 ## 3. CPU Pipeline: Two Fused Stages
 
-The optimized CPU path keeps the same mathematical boundary between intra-chunk and inter-chunk work, but compresses the loops:
+The optimized CPU path keeps the same mathematical boundary between intra-chunk and inter-chunk work, but compresses the loops. The easiest way to see it is side-by-side:
 
-```text
-prepare:
-  optional Q/K L2 norm
-  chunk_local_cumsum(g)
+| Triton loop pipeline | CPU fused loop |
+|----------------------|----------------|
+| `chunk_local_cumsum`<br>parallel over `[B, NT, Hv]`<br>materializes cumulative `g` | Same preparation step. This one is still kept separate because the later stages reuse cumulative gate values. |
+| `chunk_gated_delta_rule_fwd_kkt_solve`<br>parallel over chunk/head domain<br>materializes `A_solve` | **Intra stage**, parallel over `[NT, H]`:<br>`decay_mask` + `K @ K^T` + triangular solve + `recompute_w_u`.<br>**`A_solve` is not materialized globally**; it stays in thread-local `attn2`. |
+| `recompute_w_u`<br>parallel over `[B, NT, Hv]`<br>materializes `w`, `u` | Folded into the same intra loop. `w` and `u` are still materialized because they cross from the intra domain to the inter domain. |
+| `chunk_gated_delta_rule_fwd_h`<br>parallel over `[B, Hv]`, sequential over chunks<br>materializes recurrent chunk state / `v_new`-like temporary | **Inter stage**, parallel over `[num_seqs, Hv]` and sequential over chunks inside each lane. The recurrent state is kept in FP32 and updated in place. **`h` / `v_new` are not materialized globally**. |
+| `chunk_fwd_o`<br>parallel over `[B, NT, Hv]`<br>materializes final output | Folded into the inter loop by changing loop order: compute local attention, recurrent contribution, output accumulation, and state update together. |
 
-stage 1: intra, parallel over [NT, H]
-  decay mask
-  K @ K^T
-  apply beta and decay
-  triangular solve
-  recompute w and u
-
-stage 2: inter, parallel over [num_seqs, Hv]
-  local chunk attention
-  recurrent state contribution
-  output accumulation
-  state update
-```
+The key point is that CPU does not fuse everything into one loop. It only fuses across rows where the parallel dimension can be made compatible without introducing cross-thread dependency. There is also a throughput trade-off: for GQA, looping over `[num_seqs, H]` can reuse `q @ k^T` across value heads and save one GEMM, but for Qwen 3.5 `H = 16` is too small to fill a 32-core CPU when `num_seqs` is small. The inter stage therefore uses `[num_seqs, Hv]` to expose more parallel work, accepting some duplicated local attention compute.
 
 The public wrapper reflects this two-stage structure:
 
@@ -184,6 +168,8 @@ No other thread needs the temporary `attn2`, so it can stay local.
 ## 5. Optimization II: Fuse `fwd_h` and `chunk_fwd_o`
 
 The inter stage uses a different parallel domain: `[num_seqs, Hv]`.
+
+There is an alternative design: parallel over `[num_seqs, H]`, then loop over the `HG = Hv / H` value heads inside each K head group. This would allow `q @ k^T` to be computed once and reused, similar to the intra stage. The reason not to use it here is practical parallelism. On Qwen 3.5, `H = 16`; with a single sequence, `[num_seqs, H]` exposes only 16 independent lanes, which is not enough to occupy a 32-core CPU. Using `[num_seqs, Hv]` increases the parallel work, at the cost of duplicating the small local `q @ k^T` computation across value heads.
 
 For each sequence and value head, the loop walks chunks in order. That order is sequential because of recurrent state:
 
