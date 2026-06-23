@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mingfei Ma — personal site">
+  <title>Mingfei Ma</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="eyebrow">Hello, I'm</p>
+      <h1>Mingfei Ma</h1>
+      <p class="tagline">
+        Building high-performance systems for AI inference and serving.
+      </p>
+    </header>
+
+    <section class="links">
+      <a class="card" href="https://github.com/mingfeima" target="_blank" rel="noopener noreferrer">
+        <span class="card-label">GitHub</span>
+        <span class="card-value">@mingfeima</span>
+      </a>
+      <a class="card" href="https://github.com/mingfeima/sglang" target="_blank" rel="noopener noreferrer">
+        <span class="card-label">Project</span>
+        <span class="card-value">SGLang</span>
+      </a>
+    </section>
+
+    <section class="about">
+      <h2>About</h2>
+      <p>
+        Welcome to my personal page. I work on LLM serving, CPU/GPU kernels,
+        and performance optimization. This site is hosted on GitHub Pages.
+      </p>
+    </section>
+
+    <footer>
+      <p>&copy; <span id="year"></span> Mingfei Ma</p>
+    </footer>
+  </main>
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
