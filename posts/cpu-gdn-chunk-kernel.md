@@ -14,7 +14,7 @@ tagline: >-
 
 ## Background
 
-This note is about optimizing `chunk_gated_delta_rule` for CPU in SGLang. The implementation lives in `sgl-kernel/csrc/cpu/mamba/fla.cpp`, and the branch work is around `pr_flash_linear_attn_opt`.
+This note is about optimizing `chunk_gated_delta_rule` for CPU in SGLang. The implementation lives in `sgl-kernel/csrc/cpu/mamba/fla.cpp`.
 
 Gated Delta Network (GDN) is a linear attention style layer. During prefill, it processes a long sequence by chunks. The math has both intra-chunk work and inter-chunk recurrent state update:
 
@@ -267,6 +267,9 @@ vsum = dpbf16(vsum, x, x)
 rscale = 1 / sqrt(sum + eps)
 out = x * rscale
 ```
+Generically, Norm would require read input twice, when reduction dim size is not big, this would usually hit L1. But for special case,
+here for example `D = 128`, we can hold 128x BF16 with 8 avx512 regs and read just once. This trick applies to situation when reducetion
+dim size is a constant small number, e.g. 128, 192, etc.
 
 For query, it also fuses the attention scale:
 
