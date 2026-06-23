@@ -16,18 +16,14 @@ tagline: >-
 
 This note is about optimizing `chunk_gated_delta_rule` for CPU in SGLang. The implementation lives in `sgl-kernel/csrc/cpu/mamba/fla.cpp`.
 
-Gated Delta Network (GDN) is a linear attention style layer. During prefill, it processes a long sequence by chunks. The math has both intra-chunk work and inter-chunk recurrent state update:
+Gated Delta Network (GDN) is a linear attention style layer. During prefill, it processes a long sequence by chunks. The computation naturally splits into two phases:
 
-```text
-within a chunk:
-  A       = K @ K^T with causal / decay masking
-  A_solve = solve_lower_triangular(I + A)
-  w, u    = recompute from A_solve, K, V, beta, gate
+| Phase | Formula sketch | Role |
+|-------|----------------|------|
+| Intra-chunk | `A = K @ K^T` with causal / decay masking<br>`A_solve = solve_lower_triangular(I + A)`<br>`w, u = recompute(A_solve, K, V, beta, gate)` | Build the local correction terms inside one chunk. |
+| Inter-chunk | `O_i = local_attention_i + recurrent_state_i`<br>`state_i = state_{i-1} * decay + K_i^T @ V_i'` | Carry the recurrent state from previous chunks and produce the final output. |
 
-across chunks:
-  O_i     = local attention output + recurrent state output
-  state   = state * decay + K_i^T @ V_i'
-```
+This split is also the first optimization hint: intra-chunk work is local to a chunk, while inter-chunk work is ordered by the recurrent state.
 
 The original FLA/Triton implementation is a good GPU decomposition. On CPU, launching many small loops and materializing several intermediate tensors is not ideal. The CPU optimization tries to reduce memory traffic and keep hot temporary data in thread-local buffers while using AMX BF16 brgemm for the dense matrix pieces.
 
@@ -267,9 +263,10 @@ vsum = dpbf16(vsum, x, x)
 rscale = 1 / sqrt(sum + eps)
 out = x * rscale
 ```
-Generically, Norm would require read input twice, when reduction dim size is not big, this would usually hit L1. But for special case,
-here for example `D = 128`, we can hold 128x BF16 with 8 avx512 regs and read just once. This trick applies to situation when reducetion
-dim size is a constant small number, e.g. 128, 192, etc.
+
+In a generic norm kernel, input is often read twice: one pass for reduction and one pass for scaling. When the reduction dimension is small, the second pass usually hits L1, so this is acceptable. But for fixed small dimensions such as `D = 128`, the whole row can be kept in AVX512 registers: 128 BF16 values fit in 8 vector registers. In this special case, the kernel can load once, reduce, compute the scale, and then write the normalized result.
+
+This trick applies when the reduction dimension is a compile-time small constant, for example `128` or `192`.
 
 For query, it also fuses the attention scale:
 
