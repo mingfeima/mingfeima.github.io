@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">GEMM tile traversal orders</title>
+  <desc id="desc">Comparison of row-major, Morton Z-order, and Hilbert curve traversal on a 4 by 4 GEMM tile grid.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#d7332f"/>
+    </marker>
+    <style>
+      .panel { fill: #ffffff; stroke: #d7dde8; stroke-width: 1.2; }
+      .title { font: 700 22px sans-serif; fill: #172033; }
+      .subtitle { font: 16px sans-serif; fill: #333b4f; }
+      .axis { font: 13px sans-serif; fill: #2f3748; }
+      .cell-blue { fill: #eef6ff; stroke: #8fb7e6; }
+      .cell-green { fill: #f0fae8; stroke: #a6d081; }
+      .cell-yellow { fill: #fff7dc; stroke: #f0c75f; }
+      .num { font: 700 22px sans-serif; fill: #121212; text-anchor: middle; dominant-baseline: central; }
+      .path { fill: none; stroke: #d7332f; stroke-width: 2.2; marker-end: url(#arrow); }
+      .legend { font: 13px sans-serif; fill: #253044; }
+      .note { font: 14px sans-serif; fill: #253044; }
+      .bullet { font: 13px sans-serif; fill: #263247; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="560" fill="#f7f8fb"/>
+
+  <g transform="translate(20,20)">
+    <rect class="panel" x="0" y="0" width="360" height="500" rx="8"/>
+    <text class="title" x="180" y="32" text-anchor="middle">1. Row-major</text>
+    <text class="subtitle" x="180" y="58" text-anchor="middle">Traverse row by row</text>
+    <text class="axis" x="180" y="88" text-anchor="middle">N direction</text>
+    <path d="M 235 84 L 285 84" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <text class="axis" x="36" y="166" text-anchor="middle">M</text>
+    <text class="axis" x="36" y="184" text-anchor="middle">direction</text>
+    <path d="M 36 106 L 36 224" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <g transform="translate(78,96)">
+      <rect class="cell-blue" x="0" y="0" width="52" height="52"/><rect class="cell-blue" x="52" y="0" width="52" height="52"/><rect class="cell-blue" x="104" y="0" width="52" height="52"/><rect class="cell-blue" x="156" y="0" width="52" height="52"/>
+      <rect class="cell-blue" x="0" y="52" width="52" height="52"/><rect class="cell-blue" x="52" y="52" width="52" height="52"/><rect class="cell-blue" x="104" y="52" width="52" height="52"/><rect class="cell-blue" x="156" y="52" width="52" height="52"/>
+      <rect class="cell-blue" x="0" y="104" width="52" height="52"/><rect class="cell-blue" x="52" y="104" width="52" height="52"/><rect class="cell-blue" x="104" y="104" width="52" height="52"/><rect class="cell-blue" x="156" y="104" width="52" height="52"/>
+      <rect class="cell-blue" x="0" y="156" width="52" height="52"/><rect class="cell-blue" x="52" y="156" width="52" height="52"/><rect class="cell-blue" x="104" y="156" width="52" height="52"/><rect class="cell-blue" x="156" y="156" width="52" height="52"/>
+      <text class="num" x="26" y="26">0</text><text class="num" x="78" y="26">1</text><text class="num" x="130" y="26">2</text><text class="num" x="182" y="26">3</text>
+      <text class="num" x="26" y="78">4</text><text class="num" x="78" y="78">5</text><text class="num" x="130" y="78">6</text><text class="num" x="182" y="78">7</text>
+      <text class="num" x="26" y="130">8</text><text class="num" x="78" y="130">9</text><text class="num" x="130" y="130">10</text><text class="num" x="182" y="130">11</text>
+      <text class="num" x="26" y="182">12</text><text class="num" x="78" y="182">13</text><text class="num" x="130" y="182">14</text><text class="num" x="182" y="182">15</text>
+      <path class="path" d="M 38 26 H 66"/><path class="path" d="M 90 26 H 118"/><path class="path" d="M 142 26 H 170"/>
+      <path class="path" d="M 182 38 V 66"/><path class="path" d="M 38 78 H 66"/><path class="path" d="M 90 78 H 118"/><path class="path" d="M 142 78 H 170"/>
+      <path class="path" d="M 182 90 V 118"/><path class="path" d="M 38 130 H 66"/><path class="path" d="M 90 130 H 118"/><path class="path" d="M 142 130 H 170"/>
+      <path class="path" d="M 182 142 V 170"/><path class="path" d="M 38 182 H 66"/><path class="path" d="M 90 182 H 118"/><path class="path" d="M 142 182 H 170"/>
+    </g>
+    <text class="legend" x="180" y="330" text-anchor="middle">Each cell is one GEMM tile</text>
+    <text class="bullet" x="34" y="372">- Simplest linear traversal</text>
+    <text class="bullet" x="34" y="396">- Good A-side reuse for row-wise access</text>
+    <text class="bullet" x="34" y="420">- Large jumps at row boundaries</text>
+    <text class="bullet" x="34" y="444">- Minimal scheduler overhead</text>
+  </g>
+
+  <g transform="translate(420,20)">
+    <rect class="panel" x="0" y="0" width="360" height="500" rx="8"/>
+    <text class="title" x="180" y="32" text-anchor="middle">2. Morton / Z-order</text>
+    <text class="subtitle" x="180" y="58" text-anchor="middle">Traverse by recursive Z blocks</text>
+    <text class="axis" x="180" y="88" text-anchor="middle">N direction</text>
+    <path d="M 235 84 L 285 84" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <text class="axis" x="36" y="166" text-anchor="middle">M</text>
+    <text class="axis" x="36" y="184" text-anchor="middle">direction</text>
+    <path d="M 36 106 L 36 224" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <g transform="translate(78,96)">
+      <rect class="cell-green" x="0" y="0" width="52" height="52"/><rect class="cell-green" x="52" y="0" width="52" height="52"/><rect class="cell-green" x="104" y="0" width="52" height="52"/><rect class="cell-green" x="156" y="0" width="52" height="52"/>
+      <rect class="cell-green" x="0" y="52" width="52" height="52"/><rect class="cell-green" x="52" y="52" width="52" height="52"/><rect class="cell-green" x="104" y="52" width="52" height="52"/><rect class="cell-green" x="156" y="52" width="52" height="52"/>
+      <rect class="cell-green" x="0" y="104" width="52" height="52"/><rect class="cell-green" x="52" y="104" width="52" height="52"/><rect class="cell-green" x="104" y="104" width="52" height="52"/><rect class="cell-green" x="156" y="104" width="52" height="52"/>
+      <rect class="cell-green" x="0" y="156" width="52" height="52"/><rect class="cell-green" x="52" y="156" width="52" height="52"/><rect class="cell-green" x="104" y="156" width="52" height="52"/><rect class="cell-green" x="156" y="156" width="52" height="52"/>
+      <text class="num" x="26" y="26">0</text><text class="num" x="78" y="26">1</text><text class="num" x="130" y="26">4</text><text class="num" x="182" y="26">5</text>
+      <text class="num" x="26" y="78">2</text><text class="num" x="78" y="78">3</text><text class="num" x="130" y="78">6</text><text class="num" x="182" y="78">7</text>
+      <text class="num" x="26" y="130">8</text><text class="num" x="78" y="130">9</text><text class="num" x="130" y="130">12</text><text class="num" x="182" y="130">13</text>
+      <text class="num" x="26" y="182">10</text><text class="num" x="78" y="182">11</text><text class="num" x="130" y="182">14</text><text class="num" x="182" y="182">15</text>
+      <path class="path" d="M 38 26 H 66"/><path class="path" d="M 78 38 V 66"/><path class="path" d="M 38 78 H 66"/>
+      <path class="path" d="M 90 66 L 118 38"/><path class="path" d="M 142 26 H 170"/><path class="path" d="M 182 38 V 66"/><path class="path" d="M 170 78 H 142"/>
+      <path class="path" d="M 118 90 L 90 118"/><path class="path" d="M 38 130 H 66"/><path class="path" d="M 78 142 V 170"/><path class="path" d="M 66 182 H 38"/>
+      <path class="path" d="M 90 170 L 118 142"/><path class="path" d="M 142 130 H 170"/><path class="path" d="M 182 142 V 170"/><path class="path" d="M 142 182 H 170"/>
+    </g>
+    <text class="legend" x="180" y="330" text-anchor="middle">Each cell is one GEMM tile</text>
+    <text class="bullet" x="34" y="372">- Usually computed by bit interleaving</text>
+    <text class="bullet" x="34" y="396">- Visits small 2D blocks first</text>
+    <text class="bullet" x="34" y="420">- Better locality than row-major</text>
+    <text class="bullet" x="34" y="444">- Lower overhead than Hilbert</text>
+  </g>
+
+  <g transform="translate(820,20)">
+    <rect class="panel" x="0" y="0" width="360" height="500" rx="8"/>
+    <text class="title" x="180" y="32" text-anchor="middle">3. Hilbert Curve</text>
+    <text class="subtitle" x="180" y="58" text-anchor="middle">Traverse along a Hilbert curve</text>
+    <text class="axis" x="180" y="88" text-anchor="middle">N direction</text>
+    <path d="M 235 84 L 285 84" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <text class="axis" x="36" y="166" text-anchor="middle">M</text>
+    <text class="axis" x="36" y="184" text-anchor="middle">direction</text>
+    <path d="M 36 106 L 36 224" stroke="#111" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <g transform="translate(78,96)">
+      <rect class="cell-yellow" x="0" y="0" width="52" height="52"/><rect class="cell-yellow" x="52" y="0" width="52" height="52"/><rect class="cell-yellow" x="104" y="0" width="52" height="52"/><rect class="cell-yellow" x="156" y="0" width="52" height="52"/>
+      <rect class="cell-yellow" x="0" y="52" width="52" height="52"/><rect class="cell-yellow" x="52" y="52" width="52" height="52"/><rect class="cell-yellow" x="104" y="52" width="52" height="52"/><rect class="cell-yellow" x="156" y="52" width="52" height="52"/>
+      <rect class="cell-yellow" x="0" y="104" width="52" height="52"/><rect class="cell-yellow" x="52" y="104" width="52" height="52"/><rect class="cell-yellow" x="104" y="104" width="52" height="52"/><rect class="cell-yellow" x="156" y="104" width="52" height="52"/>
+      <rect class="cell-yellow" x="0" y="156" width="52" height="52"/><rect class="cell-yellow" x="52" y="156" width="52" height="52"/><rect class="cell-yellow" x="104" y="156" width="52" height="52"/><rect class="cell-yellow" x="156" y="156" width="52" height="52"/>
+      <text class="num" x="26" y="26">0</text><text class="num" x="78" y="26">1</text><text class="num" x="130" y="26">14</text><text class="num" x="182" y="26">15</text>
+      <text class="num" x="26" y="78">3</text><text class="num" x="78" y="78">2</text><text class="num" x="130" y="78">13</text><text class="num" x="182" y="78">12</text>
+      <text class="num" x="26" y="130">4</text><text class="num" x="78" y="130">7</text><text class="num" x="130" y="130">8</text><text class="num" x="182" y="130">11</text>
+      <text class="num" x="26" y="182">5</text><text class="num" x="78" y="182">6</text><text class="num" x="130" y="182">9</text><text class="num" x="182" y="182">10</text>
+      <path class="path" d="M 38 26 H 66"/><path class="path" d="M 78 38 V 66"/><path class="path" d="M 66 78 H 38"/><path class="path" d="M 26 90 V 118"/>
+      <path class="path" d="M 26 142 V 170"/><path class="path" d="M 38 182 H 66"/><path class="path" d="M 78 170 V 142"/><path class="path" d="M 90 130 H 118"/>
+      <path class="path" d="M 130 142 V 170"/><path class="path" d="M 142 182 H 170"/><path class="path" d="M 182 170 V 142"/><path class="path" d="M 182 118 V 90"/>
+      <path class="path" d="M 170 78 H 142"/><path class="path" d="M 130 66 V 38"/><path class="path" d="M 142 26 H 170"/>
+    </g>
+    <text class="legend" x="180" y="330" text-anchor="middle">Each cell is one GEMM tile</text>
+    <text class="bullet" x="34" y="372">- Strong 2D spatial locality</text>
+    <text class="bullet" x="34" y="396">- Adjacent 1D ids stay close in 2D</text>
+    <text class="bullet" x="34" y="420">- Higher indexing complexity</text>
+    <text class="bullet" x="34" y="444">- Good target for benchmarking</text>
+  </g>
+
+  <rect x="170" y="530" width="860" height="24" rx="6" fill="#ffffff" stroke="#d7dde8"/>
+  <text class="note" x="600" y="547" text-anchor="middle">Numbers are execution order; red arrows show the path from one GEMM tile to the next on a 4 x 4 tile grid.</text>
+</svg>
