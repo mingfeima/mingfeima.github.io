@@ -102,8 +102,8 @@ A minimal V2 offload experiment can start with:
 --offload-mode cpu
 ```
 
-The intern should first understand where SGLang decides which weights are kept on
-GPU, which weights are offloaded, and how prefetch is scheduled today.
+Start by understanding where SGLang decides which weights are kept on GPU, which
+weights are offloaded, and how prefetch is scheduled today.
 
 ## Expert Prediction Direction
 

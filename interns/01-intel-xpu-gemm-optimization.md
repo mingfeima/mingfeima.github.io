@@ -36,9 +36,8 @@ Recommended examples to study and run first:
 | [`08_bmg_gemm_f8`](https://github.com/intel/sycl-tla/tree/main/examples/08_bmg_gemm_f8) | FP8 GEMM reference. |
 | [`13_bmg_gemm_bias`](https://github.com/intel/sycl-tla/tree/main/examples/13_bmg_gemm_bias) | Bias fusion reference. |
 
-The intern should treat `00_bmg_gemm` as the first reproducible baseline, then
-compare the Hilbert and CA scheduling prototypes against the relevant SYCL-TLA
-baseline examples.
+Treat `00_bmg_gemm` as the first reproducible baseline, then compare the Hilbert
+and CA scheduling prototypes against the relevant SYCL-TLA baseline examples.
 
 ## Initial Scheduler Scan
 
